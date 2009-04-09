@@ -5,7 +5,7 @@ import getopt
 import twitter
 
 #Declare globals
-api = twitter.Api()
+api = None
 
 def usage():
     print('Usage: see the wiki (this will get fixed later')
