@@ -18,14 +18,21 @@ def authenticatedList(authenticatedUsername):
     global api
     # Get our username from the global api var
     statuses = api.GetFriendsTimeline(authenticatedUsername)
+    printStatuses(statuses)
+
+def unauthenticatedList(username):
+    global api
+    statuses = api.GetUserTimeline(username)
+    printStatuses(statuses)
+
+def printStatuses(statuses):
     for status in statuses:
         user = status.GetUser()
         username = user.GetName()
         message = status.GetText()
-        print "%s: %s" % (username, message)
+        print "%s: %s\n" % (username, message)
+    sys.exit(1)
 
-def unauthenticatedList(username):
-    api.getUserTimeline(username)
 
 def main(argv):
     username = ""
