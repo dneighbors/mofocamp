@@ -1,0 +1,73 @@
+#!/usr/bin/env python
+import os
+import sys
+import getopt
+import twitter
+
+
+def usage():
+    print('Usage: see the wiki (this will get fixed later')
+
+def tweet(message):
+    """Set your status to <message>."""
+    status = api.PostUpdate(message)
+
+def authenticatedList():
+    api.getFriendsTimeline(authenticatedUsername)
+
+def unauthenticatedList(username):
+    api.getUserTimeline(username)
+
+def main(argv):
+    try:
+        opts, args = getopt.getopt(argv, "f:hlop:t:u:", ["friend", "help", "list", "own", "password", "tweet", "username"])
+    except getopt.error:
+        usage()
+        sys.exit(2)
+    for opt, arg in opts:
+        if opt in ("-f", "--friend"):
+            action = "listfriend"
+            targetUser = arg
+        elif opt in ("-h", "--help"):
+            action = "noaction"
+            usage()
+            sys.exit()
+        elif opt in ("-l", "--list"):
+            action = "list"
+        elif opt in ("-o", "--own"):
+            action = "listown"
+        elif opt in ("-p", "--password"):
+            password = arg
+        elif opt in ("-t", "--tweet"):
+            action = "tweet"
+            tweetMessage = arg
+        elif opt in ("-u", "--username"):
+            username = arg
+    if username and password:
+        api = twitter.Api(username=username, password=password)
+    else:
+        api = twitter.Api()
+    if action in ("list", "listfriend", "listown"):
+        if action in ("listown"):
+            if username:
+                targetUser = username
+            else:
+                print "A username must be supplied to get your list"
+                sys.exit(-1)
+        if action in ("listfriend", "listown"):
+            non_authenticated_list(targetUser)
+        elif action in ("list"):
+            if username and password:
+                authenticated_list()
+            else:
+                print "A username and password must be supplied to that list"
+                sys.exit(-1)
+        elif action in ("tweet"):
+            if username and password:
+                tweet(tweetMessage)
+            else:
+                print "Username and password must be supplied to post a tweet"          elif action in ("error"):
+            print "You gotta tell me to do something"
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
