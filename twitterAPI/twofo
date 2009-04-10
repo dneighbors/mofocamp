@@ -3,6 +3,7 @@ import os
 import sys
 import getopt
 import twitter
+import ConfigParser
 
 #Declare globals
 api = None
@@ -26,18 +27,65 @@ def unauthenticatedList(username):
     printStatuses(statuses)
 
 def printStatuses(statuses):
+    counter = 0
     for status in statuses:
-        user = status.GetUser()
-        username = user.GetName()
-        message = status.GetText()
-        print "%s: %s\n" % (username, message)
+        if counter < 10:
+            user = status.GetUser()
+            username = user.GetName()
+            message = status.GetText()
+            print "%s: %s\n" % (username, message)
+            counter = counter + 1
     sys.exit(1)
 
+def ensure_dir(directory):
+    dir = os.path.dirname(directory)
+    if not os.path.exists(dir):
+        os.makedirs(dir)
 
 def main(argv):
-    username = ""
-    password = ""
-    action = "noaction"
+    username = None
+    password = None
+    storeInfo = None
+    storeUsername = None
+    storePassword = None
+    # Check the config file to see if we can extract the username and password
+    config = ConfigParser.SafeConfigParser()
+    defaultConfigDir = "%s/.config/twofo/default.conf" % os.getenv("HOME")
+    config.read(defaultConfigDir)
+    if config.has_option('login', 'username'):
+        username = config.get('login', 'username')
+    else:
+        username = raw_input("Username: ")
+        storeInfo = 1
+    if config.has_option('login', 'password'):
+        password = config.get('login', 'password')
+    else:
+        password = raw_input("Password: ")
+    if config.has_option('login', 'storeInfo'):
+        storeInfo = config.get('login', 'storeInfo')
+    if storeInfo:
+        if storeInfo == 1:
+            storeUsername = raw_input("Would you like me to store your username?")
+            if storeUsername in ("y", "Y", "yes", "Yes", "YES"):
+                storeUsername = True
+            else:
+                storeUsername = False
+            if storeUsername:
+                    storePassword = raw_input("Would you like me to store your password as well?, WARNING: I will be storing the password in a plain text file. Use with caution, you will not be asked again: ")
+                    if storePassword in ("y", "Y", "yes", "Yes", "YES"):
+                        storePassword = True
+                    else:
+                        storePassword = False
+    if storeUsername:
+        if not config.has_section('login'):
+            config.add_section('login')
+        config.set('login', 'username', username)
+        if storePassword:
+            config.set('login', 'password', password)
+        ensure_dir(defaultConfigDir)
+        configfile = open(defaultConfigDir, 'wb')
+        config.write(configfile)
+    action = None
     try:
         opts, args = getopt.getopt(argv, "f:hlop:t:u:", ["friend", "help", "list", "own", "password", "tweet", "username"])
     except getopt.error:
@@ -62,33 +110,35 @@ def main(argv):
         elif opt in ("-u", "--username"):
             username = arg
     global api # Let our function know we mean the global api
-    if username and password:
-        api = twitter.Api(username=username, password=password)
-    else:
-        api = twitter.Api()
-    if action in ("list", "listfriend", "listown"):
-        if action in ("listown"):
-            if username:
-                targetUser = username
-            else:
-                print "A username must be supplied to get your list"
-                sys.exit(-1)
-        if action in ("listfriend", "listown"):
-            unauthenticatedList(targetUser)
-        elif action in ("list"):
-            if username and password:
-                authenticatedList(username)
-            else:
-                print "A username and password must be supplied to that list"
-                sys.exit(-1)
-    elif action in ("tweet"):
+    if action:
+        if username and password:
+            api = twitter.Api(username=username, password=password)
+        else:
+            api = twitter.Api()
+        if action in ("list", "listfriend", "listown"):
+            if action in ("listown"):
+                if username:
+                    targetUser = username
+                else:
+                    print "A username must be supplied to get your list"
+                    sys.exit(-1)
+            if action in ("listfriend", "listown"):
+                unauthenticatedList(targetUser)
+            elif action in ("list"):
+                if username and password:
+                    authenticatedList(username)
+                else:
+                    print "A username and password must be supplied to that list"
+                    sys.exit(-1)
+        elif action in ("tweet"):
             if username and password:
                 tweet(tweetMessage)
             else:
                 print "Username and password must be supplied to post a tweet"
                 sys.exit(-1)
-    elif action in ("noaction"):
+    else:
         print "You gotta tell me to do something"
+        sys.exit(-1)
 
 if __name__ == "__main__":
     main(sys.argv[1:])
