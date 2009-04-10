@@ -9,7 +9,7 @@ import ConfigParser
 api = None
 
 def usage():
-    print('Usage: twofo [OPTION]\nProvides a variety of twitter functions from the command line. Will eventually (read potentially) have a GUI sometime in the future.\n\nACTIONS:\n\t-f, --friend <twitter user>\tGet the last 10 tweets tweeted by \n\t\t\t\t\t<twitter-user>. Does not require\n\t\t\t\t\tusername or password.\n\t-h, --help\t\t\tPrints this help and exits\n\t-l, --list\t\t\tLists the 10 most recent tweets from \n\t\t\t\t\tyour friends. You must provide a \n\t\t\t\t\tusername and password.\n\t-o, --own\t\t\tGet the last 10 tweets you tweeted.\n\t\t\t\t\trequires that a username be \n\t\t\t\t\tprovided using "-u <username>"\n\t\t\t\t\t(equiv to -f <own_username>)\n\t-t, --tweet "<tweet message>"   Tweets the message enclosed in the \n\t\t\t\t\tquotes. You must provide a valid\n\t\t\t\t\tusername and password.\n\nOPTIONS:\n\t-p, --password <password>\tSets the password for authentication.\n\t-u, --username <username>\tSets the username for authentication.\n\nReport bugs to place@hold.er\n')
+    print('Usage: twofo [OPTION]\nProvides a variety of twitter functions from the command line. Will eventually (read potentially) have a GUI sometime in the future.\n\nACTIONS:\n\t-f, --friend <twitter user>\tGet the last 10 tweets tweeted by \n\t\t\t\t\t<twitter-user>. Does not require\n\t\t\t\t\tusername or password.\n\t-h, --help\t\t\tPrints this help and exits\n\t-l, --list\t\t\tLists the 10 most recent tweets from \n\t\t\t\t\tyour friends. You must provide a \n\t\t\t\t\tusername and password.\n\t-o, --own\t\t\tGet the last 10 tweets you tweeted.\n\t\t\t\t\trequires that a username be \n\t\t\t\t\tprovided using "-u <username>"\n\t\t\t\t\t(equiv to -f <own_username>)\n\t-t, --tweet "<tweet message>"   Tweets the message enclosed in the \n\t\t\t\t\tquotes. You must provide a valid\n\t\t\t\t\tusername and password.\n\nOPTIONS:\n\t-p, --password <password>\tSets the password for authentication.\n\t-u, --username <username>\tSets the username for authentication.\n\nReport bugs to info@gangplankhq.com\n')
 
 def tweet(message):
     """Set your status to <message>."""
@@ -128,7 +128,7 @@ def main(argv):
                 if username and password:
                     authenticatedList(username)
                 else:
-                    print "A username and password must be supplied to that list"
+                    print "A username and password must be supplied to get that list"
                     sys.exit(-1)
         elif action in ("tweet"):
             if username and password:
