@@ -210,11 +210,9 @@ class Application < Wx::App
 	
 	
 	#When mouse button pressed, record location for use in release event handler.
-	def on_mouse_press(event)
-		@log.debug "Mouse pressed at #{event.x}, #{event.y}."
-		@press_location = Location.new(event.x, event.y)
+	def on_key_press(event)
+		@log.debug "Key pressed: #{event}."
 	end
-	
 	
 	
 	#Takes a Wx::DC to copy the view to.
@@ -494,8 +492,7 @@ EOD
 			
 			@log.debug "Set up mouse click/drag handlers for canvas."
 			@press_location = nil
-			@drawing_area.evt_left_down {|event| on_mouse_press(event)}
-			@drawing_area.evt_left_up {|event| on_mouse_release(event)}
+			@drawing_area.evt_key_down {|event| on_key_press(event)}
 			
 			@log.debug "Whenever the drawing area needs updating, copy the view's buffer over."
 			@drawing_area.evt_paint {|event| @drawing_area.paint {|dc| render(dc)}}

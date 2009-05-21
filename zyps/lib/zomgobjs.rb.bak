@@ -38,7 +38,7 @@ class Asteroid < Creature
       :size => 25,
       :location => Location.new(0, 0)
     }.merge(options)
-    vector = Vector.new(rand(10), rand(360))
+    vector = Vector.new(rand(360), rand(10))
     behaviors = [SplitBehavior.new]
     size = option[:size]
     color = Color.white
@@ -46,32 +46,23 @@ class Asteroid < Creature
 end
 
 class Bullet < Creature
-  def initalize(options = {})
-    options = {
-      :location => Location.new(0, 0),
-      :vector => Vector.new(100, rand(360))
-    }.merge(options)
-    behaviors = [BulletBehavior.new]
+  def initialize
+    super
     color = Color.red
   end
 end
 
 class Ship < Creature
-  def initalize
-    ship = Creature.new(:color => Color.blue)
+  def initialize
+    super
+    color = Color.blue
   end
 end
 
 class SplitBehavior < Behavior
   def initalize
+    super
     actions = [ExplodeAction.new([Asteroid.new, Asteroid.new]), DestroyAction.new]
-    collisions = [CollisionCondition.new, ClassCondition.new(Bullet)]
-  end
-end
-
-class BulletBehavior < Behavior
-  def initalize
-    actions = [DestroyAction.new]
-    collisions = [CollisionCondition.new, ClassCondition.new(Asteroid)]
+    collisions = [CollisionCondition.new]
   end
 end
