@@ -32,6 +32,7 @@ begin
 	require 'zyps/serializer'
 	require 'zyps/views/trails'
 	require 'zyps/views/canvas/wx'
+	require 'zomgobjs'
 rescue LoadError
 	if gems_loaded == false
 		require 'rubygems'
@@ -214,32 +215,6 @@ class Application < Wx::App
 		@press_location = Location.new(event.x, event.y)
 	end
 	
-	
-	#Create a creature on button release.
-	def on_mouse_release(event)
-		@log.debug "Mouse released at #{event.x}, #{event.y}."
-		#Ensure the mouse was pressed within the canvas.
-		if @press_location
-			#Create creature at release location.
-			@release_location = Location.new(event.x, event.y)
-			@log.debug "Release location: #{@release_location.inspect}"
-			@environment.add_object @generator.create_creature(
-				:x => event.x,
-				:y => event.y,
-				:speed => Utility.find_distance(@press_location, @release_location) * 2, #Use distance dragged as speed.
-				:pitch => Utility.find_angle(@press_location, @release_location), #Move in direction of drag.
-				:turn => @controls.turn_flag.is_checked,
-				:approach => @controls.approach_flag.is_checked,
-				:flee => @controls.flee_flag.is_checked,
-				:push => @controls.push_flag.is_checked,
-				:pull => @controls.pull_flag.is_checked,
-				:breed => @controls.breed_flag.is_checked,
-				:eat => @controls.eat_flag.is_checked
-			)
-			#Nullify press location, as it is no longer applicable.
-			@press_location = nil
-		end
-	end
 	
 	
 	#Takes a Wx::DC to copy the view to.
@@ -496,12 +471,13 @@ EOD
   	    )
   	  )
   	  #Have objects wrap.
-  	  @environment.add_environmental_factor(WrapAround.new(
+  	  @enclosure = WrapAround.new(
     	  :left => 0,
   			:bottom => 0,
   			:top => @drawing_area.size.height,
   			:right => @drawing_area.size.width
-  	  ))
+  	  )
+  	  @environment.add_environmental_factor(@enclosure)
 
 			@environment.add_environmental_factor SpeedLimit.new(@options[:max_speed]) if @options[:max_speed]
 			@environment.add_environmental_factor PopulationLimit.new(@options[:max_population]) if @options[:max_population]
@@ -1002,3 +978,5 @@ rescue Exception => exception
 	#Print error to STDERR and exit with an abnormal status.
 	abort "Error: " + exception.message + exception.backtrace.join("\n")
 end
+
+
