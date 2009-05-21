@@ -1,0 +1,87 @@
+body {
+	margin: 0;
+	padding: 0;
+	text-align: center;
+	background: #000000;
+	font: 13px Arial, "Lucida Sans Unicode", sans-serif;
+}
+
+#container {
+	margin: 0 auto;
+	margin-top: 10px;
+	margin-bottom: 10px;
+	position: relative;
+	width: 750px;
+	background: #ffffff;
+	padding-top: 20px;
+}
+
+#container #heading {
+	color: #ffffff;
+	font: 75px Arial, "Lucida Sans Unicode", sans-serif;
+	padding-top: 20px;
+	height: 125px;
+	width:	750px;
+	background: #000000 url(title.png) center no-repeat;
+}
+
+#container #content {
+	text-align: left;
+	padding-top: 20px;
+	margin-left: 200px;
+	width: 500px;
+}
+
+#container #sidebar {
+	text-align: left;
+	position: absolute;
+	top: 200px;
+	left: 0;
+	width: 150px;
+	margin-right: 25px;
+}
+
+#container #footer {
+	text-align: center;
+	font: 9px Arial, sans-serif;
+	padding: 4px;
+	border-top: 1px solid;
+	color: #999999;
+}
+
+td.caption {
+	font: 10px Arial, "Lucida Sans Unicode", sans-serif;
+}
+
+ul {
+	list-style: none;
+}
+
+li {
+	border-bottom: 1px solid #999999;
+	padding-top: 10px;
+}
+
+a {
+	text-decoration: none;
+	color: #336699;
+}
+
+pre {
+	padding: 5px;
+	padding-left: 30px;
+	font: 10px Courier;
+}
+
+p {
+	padding: 5px;
+	padding-left: 10px;
+}
+
+table {
+	padding-left: 10px;
+}
+
+td {
+	text-align: center;
+}

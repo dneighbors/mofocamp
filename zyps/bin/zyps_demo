@@ -1,0 +1,511 @@
+#!/usr/bin/ruby
+
+# Copyright 2007-2008 Zyps Contributors.
+# 
+# This file is part of Zyps.
+# 
+# Zyps is free software; you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+$: << (File.dirname(__FILE__) + '/../lib')
+
+gems_loaded = false
+begin
+	require 'logger'
+	require 'wx'
+	require 'zyps'
+	require 'zyps/actions'
+	require 'zyps/conditions'
+	require 'zyps/environmental_factors'
+	require 'zyps/views/trails'
+	require 'zyps/views/canvas/wx'
+rescue LoadError
+	if gems_loaded == false
+		require 'rubygems'
+		gems_loaded = true
+		retry
+	else
+		raise
+	end
+end
+
+
+include Zyps
+
+
+LOG_LEVEL = Logger::WARN
+LOG_HANDLE = STDOUT
+
+
+class Demo < Wx::App
+
+
+	#The view width.
+	WIDTH = 400
+	#The view height.
+	HEIGHT = 300
+	#Number of frames per second.
+	FRAMES_PER_SECOND = 30
+	#Default size of game objects.
+	DEFAULT_OBJECT_SIZE = 78.5 #5 units in radius.
+
+	
+	#Initialize an Environment and a View.  Then run the demos.
+	def on_init
+	
+		@log = Logger.new(LOG_HANDLE)
+		@log.level = LOG_LEVEL
+		@log.progname = self
+		
+		say "We're using wxRuby as the GUI framework for this demo."
+		say "First, we need to create a Frame (window) to hold everything."
+		frame = Wx::Frame.new(nil, :size => [WIDTH, HEIGHT], :title => "Zyps Demo")
+		frame.evt_close {|event| exit}
+		
+		say "Zyps environments are displayed using Views."
+		say "A TrailsView shows game objects with little light trails behind them."
+		view = TrailsView.new
+		say "We also assign the View a Canvas to draw to."
+		say "Since our framework is wxWidgets, we'll use a WxCanvas."
+		view.canvas = WxCanvas.new(WIDTH, HEIGHT)
+		
+		say "We need a place to draw our View to."
+		say "We'll add a Wx::Window to the Frame."
+		window = Wx::Window.new(frame)
+		
+		say "The world is called an Environment in Zyps.  Let's create a new one."
+		@environment = Environment.new
+		say "We tell the View to display our Environment by adding it as an Observer."
+		@environment.add_observer(view)
+		say "We'll also add this application as an observer, to track the number of updates."
+		@update_count = 0
+		@environment.add_observer(self)
+		
+		say "The Utility module calculates distances and angles between objects."
+		say "Utility is sometimes asked to compute the same distance or angle over and over."
+		say "We can speed this by returning a cached result instead of re-calculating it."
+		say "Let's turn this feature on."
+		Utility.caching_enabled = true
+		
+		say "We want to update the environment #{FRAMES_PER_SECOND} times per second."
+		milliseconds_per_frame = (1.0 / FRAMES_PER_SECOND * 1000).to_int
+		say "So, we'll set up a timer to fire every #{milliseconds_per_frame} milliseconds."
+		timer_id = Wx::ID_HIGHEST + 1
+		timer = Wx::Timer.new(self, timer_id)
+		say "The timer will trigger the environment update."
+		say "Then it copies the updated view's buffer to our window."
+		say "We'll clear the cached values from the Utility module to save memory."
+		say "We also call the Ruby garbage collector with each update."
+		say "This keeps dead objects from accumulating and causing hiccups later."
+		evt_timer(timer_id) do
+			@environment.interact
+			window.paint do |surface|
+				surface.draw_bitmap(view.canvas.buffer, 0, 0, false)
+			end
+			Utility.clear_caches
+			GC.start
+		end
+		timer.start(milliseconds_per_frame)
+		
+		say "Our final setup step is to show the window that will display it all."
+		frame.show
+		
+	end
+	
+	
+	#Watch for environment updates.
+	#After a certain number, run the next demo.
+	def update(environment)
+		case @update_count
+			when 0:
+				say "-" * 30
+				test_render
+			when 100:
+				test_render_2
+				say "-" * 30
+			when 200:
+				@environment.clear_objects
+				test_environmental_factors
+			when 300:
+				test_environmental_factors_2
+				say "-" * 30
+			when 400:
+				@environment.clear_objects
+				@environment.clear_environmental_factors
+				test_behaviors
+			when 500:
+				test_behaviors_2
+				say "-" * 30
+			when 600:
+				@environment.clear_objects
+				test_flee
+				say "-" * 30
+			when 700:
+				@environment.clear_objects
+				test_turn
+				say "-" * 30
+			when 1100:
+				@environment.clear_objects
+				test_eat
+				say "-" * 30
+			when 1200:
+				@environment.clear_objects
+				test_explode
+				say "-" * 30
+			when 1300:
+				@environment.clear_objects
+				@environment.clear_environmental_factors
+				test_shoot
+				say "-" * 30
+			when 1400:
+				finish
+		end
+		@update_count += 1
+	end
+
+	
+	#Populate an environment with the given number of creatures.
+	def generate_creatures(count = 50)
+		@log.debug "Generating #{count} creatures."
+		objects = []
+		count.times do |i|
+			multiplier = i / count.to_f
+			objects << Creature.new(
+				:name => i,
+				:location => Location.new(multiplier * WIDTH, multiplier * HEIGHT),
+				:color => Color.new(multiplier, 1 - multiplier, multiplier / 2 + 0.5),
+				:vector => Vector.new(100 * multiplier, multiplier * 360),
+				:size => DEFAULT_OBJECT_SIZE
+			)
+		end
+		objects
+	end
+	
+	
+	#Demonstrates drawing an environment and changing its size.
+	def test_render
+
+		say("The things in an Environment are called GameObjects.  Each object has:")
+		object = GameObject.new
+		say("...a name")
+		object.name = "Huey"
+		say("...a size")
+		object.size = DEFAULT_OBJECT_SIZE
+		say("...a Location with x and y coordiates")
+		object.location = Location.new(WIDTH/2, HEIGHT/2)
+		say("...a Color with red, green and blue components ranging from 0 to 1")
+		object.color = Color.new(1, 0, 0)
+		say("...and a Vector giving its speed and an angle from 0 to 360.")
+		object.vector = Vector.new(10, 45)
+		
+		say("Once your object is ready, add it to the environment.")
+		@environment.add_object(object)
+
+	end
+	
+	def test_render_2
+	
+		say("Let's add a couple more objects with different colors and vectors.")
+		@environment.add_object GameObject.new(
+			:name => "Duey",
+			:location => Location.new(WIDTH/2, HEIGHT/2),
+			:color => Color.new(0, 1, 0),
+			:vector => Vector.new(20, 135),
+			:size => DEFAULT_OBJECT_SIZE * 2
+		)
+		@environment.add_object GameObject.new(
+			:name => "Louie",
+			:location => Location.new(WIDTH/2, HEIGHT/2),
+			:color => Color.new(0, 0, 1),
+			:vector => Vector.new(30, 225),
+			:size => DEFAULT_OBJECT_SIZE * 3
+		)
+				
+	end
+	
+	
+	#Demonstrates environmental factors by adding gravity to the environment.
+	def test_environmental_factors
+
+		generate_creatures.each {|creature| @environment.add_object(creature)}
+		
+		say("Without gravity, objects just travel on forever.")
+	
+	end
+	
+	def test_environmental_factors_2
+	
+		say("Let's add a new EnvironmentalFactor to simulate gravity.")
+		gravity = Gravity.new(200)
+		
+		say("We add gravity to the Environment.")
+		@environment.add_environmental_factor gravity
+		
+		say("Everything immediately drops.")
+		
+	end
+
+
+	#Demonstrates creature behaviors.
+	def test_behaviors
+
+		generate_creatures.each {|creature| @environment.add_object(creature)}
+		
+		say("Let's add a Behavior to our creatures.")
+		chase = Behavior.new
+		
+		say("A Behavior has one or more Action objects that define an action to take on the current target.")
+		say("We'll add an Action that makes the creatures head toward their target at 300 units per second.")
+		chase.add_action ApproachAction.new(300)
+		
+		say("A Behavior also has one or more Condition objects.")
+		say("Unless every Condition is true, the action(s) won't be carried out.")
+		say("So that they don't target every creature on the screen, we'll add a condition to the behavior saying the target must have the label 'food'.")
+		chase.add_condition TagCondition.new("food")
+		
+		say("We'll apply this behavior to all creatures currently in the environment.")
+		@environment.objects.each {|creature| creature.add_behavior chase.copy}
+		
+	end
+	
+	def test_behaviors_2
+		
+		say("Then we'll toss a piece of food into the environment.")
+		say("(It's just a GameObject with the tag 'food'.)")
+		@environment.add_object GameObject.new(
+			:name => "target",
+			:location => Location.new(WIDTH / 2, HEIGHT / 2),
+			:color => Color.white,
+			:vector => Vector.new(30, 315),
+			:size => DEFAULT_OBJECT_SIZE * 2, #Size.
+			:tags => ["food"]
+		)
+		
+		say("Now there's a target in the environment for which the condition is true.")
+		say("All the Creatures will turn and chase it.")
+		
+	end
+
+
+	#Demonstrates altering object vectors.
+	def test_turn
+
+		generate_creatures.each {|creature| @environment.add_object(creature)}
+		
+		say("This time we'll use the TurnAction class.")
+		say("We tell each creature it should turn 90 degrees.")
+		@environment.objects.each do |creature|
+			turn = Behavior.new
+			turn.add_action TurnAction.new(100, 90)
+			creature.add_behavior turn
+		end
+		
+	end
+
+
+	#Demonstrates adding vectors.
+	def test_flee
+
+		generate_creatures.each {|creature| @environment.add_object(creature)}
+		
+		say("A FleeAction is just like an ApproachAction, but we head in the OPPOSITE direction.")
+		@environment.objects.each do |creature|
+			flee = Behavior.new
+			flee.add_action FleeAction.new(300)
+			flee.add_condition TagCondition.new("predator")
+			creature.add_behavior flee
+		end
+		
+		@environment.add_object Creature.new(
+			:name => "hunter",
+			:location => Location.new(WIDTH / 2, HEIGHT / 2),
+			:vector => Vector.new(10, 0),
+			:size => DEFAULT_OBJECT_SIZE,
+			:tags => ["predator"]
+		)
+		
+	end
+
+	
+	#Demonstrates keeping a reference to an Environment so a Creature can alter it.
+	def test_eat
+	
+		generate_creatures.each {|creature| @environment.add_object(creature)}
+		
+		say("Most games are all about destruction, but there hasn't been much so far.")
+		say("Let's create a creature that causes some havoc.")
+		predator = Creature.new(
+			:location => Location.new(0, 150),
+			:color => Color.green,
+			:vector => Vector.new(200, 0), 
+			:size => DEFAULT_OBJECT_SIZE * 5
+		)
+		
+		say("The EatAction eats targets by removing them from their environment.")
+		action = EatAction.new
+		
+		say("Create a behavior...")
+		behavior = Behavior.new
+		say("Add the action to the behavior...")
+		behavior.add_action action
+		say("Add a condition that they must collide first...")
+		behavior.add_condition CollisionCondition.new
+		say("Add the behavior to the creature...")
+		predator.add_behavior behavior
+		
+		say("Drop the creature into the actual environment...")
+		@environment.add_object(predator)
+		
+		say("And - chomp!")
+		
+	end
+	
+	
+	#Demonstrates InactiveLongerThanCondition.
+	def test_explode
+	
+		say("Let's have some fireworks.")
+		say("First we'll create 'stars' to load into the rocket.")
+		star = Creature.new(:color => Color.red)
+		say("A BlendAction will make them fade to black over time.")
+		star.add_behavior Behavior.new(:actions => [BlendAction.new(0.5, Color.black)])
+		say("An ExplodeAction copies prototype objects into the environment.")
+		action = ExplodeAction.new
+		say("We'll make copies of our star with random vectors.")
+		say("We'll load these copies into our ExplodeAction.")
+		25.times do |i|
+			copy = star.copy
+			copy.vector = Vector.new(rand(50), rand(360))
+			action.prototypes << copy
+		end
+		
+		say("It's just not smart to build fireworks without a fuse.")
+		say("An InactiveLongerThanCondition should do nicely.")
+		condition = InactiveLongerThanCondition.new
+		say("This will be a short fuse, though, say 2 seconds.")
+		condition.duration = 2
+		
+		say("We set up a Behavior with the Action and Condition...")
+		explode = Behavior.new(:actions => [action], :conditions => [condition])
+		say("Add the behavior to rockets aimed at the sky...")
+		rocket = Creature.new(
+			:behaviors => [explode],
+			:vector => Vector.new(100, 260),
+			:location => Location.new(WIDTH / 2, HEIGHT),
+			:size => 50
+		)
+		rocket2 = rocket.copy
+		rocket2.vector = Vector.new(130, 275)
+		say("And light those suckers.")
+		@environment << rocket << rocket2
+		@environment << Gravity.new(30)
+	
+	end
+
+
+	#Demonstrates ShootAction.
+	def test_shoot
+	
+		say("I'm a big fan of shoot-em-up games.")
+		say("The ability to make them easily is a major goal of Zyps.")
+		
+		say("Every shooter needs someone to play it, so let's make a player.")
+		say("We give him a 'player' tag so enemies can target him.")
+		player = Creature.new(
+			:location => Location.new(WIDTH / 2, HEIGHT / 2),
+			:behaviors => [
+				Behavior.new(
+					:actions => [FleeAction.new(100)],
+					:conditions => [ProximityCondition.new(30)]
+				)
+			],
+			:size => DEFAULT_OBJECT_SIZE,
+			:vector => Vector.new(10, 0),
+			:tags => ['player']
+		)
+		
+		say("Shooters need lots of bullets, of course.")
+		say("A bullet doesn't need to be smart, but it should destroy the player when he gets too close.")
+		bullet = Creature.new(
+			:behaviors => [
+				Behavior.new(
+					:actions => [DestroyAction.new],
+					:conditions => [
+						ProximityCondition.new(7),
+						TagCondition.new('player')
+					]
+				)
+			],
+			:vector => Vector.new(100, 0)
+		)
+		
+		say("We're going to fire groups of 3 bullets at once.")
+		bullets = [bullet, bullet.copy, bullet.copy]
+		say("There's no point firing all 3 at the same spot...")
+		say("We'll vary their angles a bit.")
+		bullets.first.vector.pitch -= 10
+		bullets.last.vector.pitch += 10
+		
+		say("And lastly, we need an enemy to fire the bullets at the player.")
+		say("We'll give him a ShootAction, and assign it our group of bullets.")
+		say("The action copies the bullets into the Environment and aims them at its target.")
+		say("An InactiveLongerThanCondition makes it fire every 0.5 seconds.")
+		enemy = Creature.new(
+			:vector => Vector.new(30, 45),
+			:behaviors => [
+				Behavior.new(
+					:actions => [ShootAction.new([bullets])],
+					:conditions => [
+						InactiveLongerThanCondition.new(0.5),
+						TagCondition.new('player'),
+					]
+				)
+			],
+			:color => Color.green,
+			:size => DEFAULT_OBJECT_SIZE
+		)
+		
+		say("Game on!")
+		@environment << player << enemy
+	
+	end
+
+
+	#End the demos.
+	def finish
+		say "To learn more about how the library works, you can read the source code in the 'bin/zyps_demo' file in the Zyps distribution."
+		say "And if you want to code your own Actions, Conditions, EnvironmentalFactors, or Views, see the distribution's 'lib' folder for examples."
+		say "Thanks for watching!"
+	end
+	
+	
+	private
+	
+		#Explain what's going on to the user.
+		def say(phrase)
+			puts phrase
+		end
+
+	
+end
+
+
+begin
+	#Run the demos.
+	Demo.new.main_loop
+rescue SystemExit
+	#No action.
+rescue Exception => exception
+	#Print error to STDERR and exit with an abnormal status.
+	abort "Error: " + exception.message
+end

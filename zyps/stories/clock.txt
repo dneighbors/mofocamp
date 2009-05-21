@@ -1,0 +1,124 @@
+# Copyright 2007-2008 Zyps Contributors.
+# 
+# This file is part of Zyps.
+# 
+# Zyps is free software; you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+Story: Pausing game
+	As a user
+	I want to be able to pause the game
+	So that I can come back to it later
+	Scenario: pausing the game
+		Given an environment
+		And a creature at "0", "0"
+		And a vector with a speed of "4" and an angle of "150"
+		When the global clock speed is set to "0"
+		And the vector is assigned to the creature
+		And "2" seconds elapse
+		And the environment interacts
+		Then the creature's location should be "0", "0"
+	Scenario: resuming the game
+		Given an environment
+		And a creature at "0", "0"
+		And a vector with a speed of "4" and an angle of "150"
+		When the vector is assigned to the creature
+		And the global clock speed is set to "0"
+		And "1" second elapses
+		And the environment interacts
+		And the global clock speed is set to "1"
+		And "1" second elapses
+		And the environment interacts
+		Then the creature's location should be "-3.464", "2"
+Story: Speeding up game
+	As a user
+	I want to be able to speed up the game
+	So that I don't have to wait through boring periods
+	Scenario: Speeding up game
+		Given an environment
+		And a creature at "0", "0"
+		And a vector with a speed of "4" and an angle of "150"
+		When the vector is assigned to the creature
+		And the global clock speed is set to "2"
+		And "1" second elapses
+		And the environment interacts
+		Then the creature's location should be "-6.928", "4"
+Story: Slowing down game
+	As a user
+	I want to be able to slow down the game
+	So that I can keep up with fast action.
+	Scenario: Slowing down game
+		Given an environment
+		And a creature at "0", "0"
+		And a vector with a speed of "4" and an angle of "150"
+		When the vector is assigned to the creature
+		And the global clock speed is set to "0.5"
+		And "1" second elapses
+		And the environment interacts
+		Then the creature's location should be "-1.732", "1"
+Story: Speeding up one action
+	As a user
+	I want to be able to speed up one action
+	So that I can act faster than other objects in the environment
+	Scenario: Speeding up firing
+		Given an environment
+		And a creature
+		And a behavior
+		And a shoot action
+		And an elapsed time condition of "2" seconds
+		And a game object
+		And a clock with a speed of "2"
+		When the game object is added to the action's prototypes
+		And the clock is assigned to the action
+		And the action is assigned to the behavior
+		And the condition is assigned to the behavior
+		And the behavior is assigned to the creature
+		And the creature is added to the environment
+		And "1" second elapses
+		And the environment interacts
+		Then there should be "2" objects in the environment
+	Scenario: Increased local AND global speed
+		Given an environment
+		And a creature
+		And a behavior
+		And a shoot action
+		And an elapsed time condition of "4" seconds
+		And a game object
+		And a clock with a speed of "2"
+		When the game object is added to the action's prototypes
+		And the clock is assigned to the action
+		And the action is assigned to the behavior
+		And the condition is assigned to the behavior
+		And the behavior is assigned to the creature
+		And the creature is added to the environment
+		And the global clock speed is set to "2"
+		And "1" second elapses
+		And the environment interacts
+		Then there should be "2" objects in the environment
+	Scenario: Normal-speed firing
+		Given an environment
+		And a creature
+		And a behavior
+		And a shoot action
+		And an elapsed time condition of "2" seconds
+		And a game object
+		And a clock with a speed of "1"
+		When the game object is added to the action's prototypes
+		And the clock is assigned to the action
+		And the action is assigned to the behavior
+		And the condition is assigned to the behavior
+		And the behavior is assigned to the creature
+		And the creature is added to the environment
+		And "1" second elapses
+		And the environment interacts
+		Then there should be "1" object in the environment
