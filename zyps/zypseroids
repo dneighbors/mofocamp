@@ -29,7 +29,6 @@ begin
 	require 'zyps/conditions'
 	require 'zyps/environmental_factors'
 	require 'zyps/remote'
-	require 'zyps/serializer'
 	require 'zyps/views/trails'
 	require 'zyps/views/canvas/wx'
 rescue LoadError
