@@ -137,14 +137,6 @@ class Application < Wx::App
 		evt_timer(timer_id) {on_timer}
 		timer.start(milliseconds_per_frame)
 		
-		if @options[:object_file]
-			@log.debug "Load environment objects from #{@options[:object_file]}."
-			begin
-				load_game_objects(@options[:object_file])
-			rescue Exception => exception
-				@log.warn exception.message
-			end
-		end
 
 		@log.debug "Display GUI."
 		@frame.send_size_event
@@ -170,6 +162,7 @@ class Application < Wx::App
 			@log.debug exception.backtrace
 			raise
 		end
+		@log.debug @environment.to_s
 		#If there are no Creatures, show instructions on creating them.
 		if @environment.object_count == 0
 			@view.canvas.buffer.draw do |dc|
@@ -211,7 +204,17 @@ class Application < Wx::App
 	
 	#When mouse button pressed, record location for use in release event handler.
 	def on_key_press(event)
-		@log.debug "Key pressed: #{event}."
+		@log.debug "Key pressed: #{event.get_key_code}."
+		case event.get_key_code
+		when 315
+		  @ship.vector.speed += 1
+		when 317
+		  @ship.vector.speed -= 1
+		when 314
+		  @ship.vector.pitch += 1
+		when 316
+		  @ship.vector.pitch -= 1
+		end
 	end
 	
 	
@@ -458,16 +461,19 @@ EOD
   	  6.times do
   	    @environment.add_object(
   	      Asteroid.new(
-  	        :location => Location.new(rand(800), rand(600))
+  	        :location => Location.new(rand(800), rand(600)),
+  	        :size => 300,
+  	        :vector => Vector.new(rand(20), rand(360))
   	      )
   	    )
   	  end
   	  #Add player.
-  	  @environment.add_object(
-  	    Ship.new(
-  	      :location => Location.new(400, 300)
-  	    )
-  	  )
+  	  @ship = 	    Ship.new(
+      	      :location => Location.new(400, 300),
+    	        :size => 100,
+    	        :vector => Vector.new(rand(20), rand(360))
+      	    )
+  	  @environment.add_object(@ship)
   	  #Have objects wrap.
   	  @enclosure = WrapAround.new(
     	  :left => 0,
@@ -479,6 +485,8 @@ EOD
 
 			@environment.add_environmental_factor SpeedLimit.new(@options[:max_speed]) if @options[:max_speed]
 			@environment.add_environmental_factor PopulationLimit.new(@options[:max_population]) if @options[:max_population]
+			
+			@log.debug @environment.to_s
 			
 		end
 		

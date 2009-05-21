@@ -46,21 +46,21 @@ class Asteroid < Creature
 end
 
 class Bullet < Creature
-  def initialize
+  def initialize(options = {})
     super
     color = Color.red
   end
 end
 
 class Ship < Creature
-  def initialize
+  def initialize(options = {})
     super
     color = Color.blue
   end
 end
 
 class SplitBehavior < Behavior
-  def initalize
+  def initalize(options = {})
     super
     actions = [ExplodeAction.new([Asteroid.new, Asteroid.new]), DestroyAction.new]
     collisions = [CollisionCondition.new]

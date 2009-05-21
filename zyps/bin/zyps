@@ -124,10 +124,7 @@ class Application < Wx::App
 		
 		@log.debug "Create an environment, and link it to the view."
 		self.environment = Environment.new
-		
-		@log.debug "Set up a creature generator."
-		@generator = CreatureGenerator.new
-		
+
 		@log.debug "Set the Utility module to cache distances and angles."
 		Utility.caching_enabled = true
 		
@@ -139,15 +136,6 @@ class Application < Wx::App
 		evt_timer(timer_id) {on_timer}
 		timer.start(milliseconds_per_frame)
 		
-		if @options[:object_file]
-			@log.debug "Load environment objects from #{@options[:object_file]}."
-			begin
-				load_game_objects(@options[:object_file])
-			rescue Exception => exception
-				@log.warn exception.message
-			end
-		end
-
 		@log.debug "Display GUI."
 		@frame.send_size_event
 		@frame.show
