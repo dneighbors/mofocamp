@@ -29,6 +29,7 @@ begin
 	require 'zyps/conditions'
 	require 'zyps/environmental_factors'
 	require 'zyps/remote'
+	require 'zyps/serializer'
 	require 'zyps/views/trails'
 	require 'zyps/views/canvas/wx'
 rescue LoadError
@@ -123,10 +124,7 @@ class Application < Wx::App
 		
 		@log.debug "Create an environment, and link it to the view."
 		self.environment = Environment.new
-		
-		@log.debug "Set up a creature generator."
-		@generator = CreatureGenerator.new
-		
+				
 		@log.debug "Set the Utility module to cache distances and angles."
 		Utility.caching_enabled = true
 		
@@ -478,28 +476,35 @@ EOD
 	
 		#Set a new environment up.
 		def environment=(value)
-		
+
 			@environment = value
 			@log.debug "Link #{@environment} to #{@view}."
 			@environment.add_observer(@view)
 			
-			@log.debug "Set up environmental factors."
-			if @options[:enclosure]
-				@enclosure = Enclosure.new(
-					:left => 0,
-					:bottom => 0,
-					:top => @drawing_area.size.height,
-					:right => @drawing_area.size.width
-				)
-				@environment.add_environmental_factor @enclosure
-			end
+  	  #Add asteroids.
+  	  6.times do
+  	    @environment.add_object(
+  	      Asteroid.new(
+  	        :location => Location.new(rand(800), rand(600))
+  	      )
+  	    )
+  	  end
+  	  #Add player.
+  	  @environment.add_object(
+  	    Ship.new(
+  	      :location => Location.new(400, 300)
+  	    )
+  	  )
+  	  #Have objects wrap.
+  	  @environment.add_environmental_factor(WrapAround.new(
+    	  :left => 0,
+  			:bottom => 0,
+  			:top => @drawing_area.size.height,
+  			:right => @drawing_area.size.width
+  	  ))
+
 			@environment.add_environmental_factor SpeedLimit.new(@options[:max_speed]) if @options[:max_speed]
 			@environment.add_environmental_factor PopulationLimit.new(@options[:max_population]) if @options[:max_population]
-			
-			if @server
-				@log.debug "Set up #{server}."
-				@server.environment = @environment
-			end
 			
 		end
 		
