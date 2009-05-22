@@ -33,20 +33,20 @@ LOG_LEVEL = Logger::DEBUG
 
 
 class Asteroid < Creature
-  def initalize(options = {})
+  def initialize(options = {})
     options = {
       :size => 25,
       :location => Location.new(0, 0)
     }.merge(options)
     vector = Vector.new(rand(10), rand(360))
     behaviors = [SplitBehavior.new]
-    size = option[:size]
+    size = options[:size]
     color = Color.white
   end
 end
 
 class Bullet < Creature
-  def initalize(options = {})
+  def initialize(options = {})
     options = {
       :location => Location.new(0, 0),
       :vector => Vector.new(100, rand(360))
@@ -57,20 +57,23 @@ class Bullet < Creature
 end
 
 class Ship < Creature
-  def initalize
-    ship = Creature.new(:color => Color.blue)
+  def initialize(options = {})
+    super
+    color = Color.blue
   end
 end
 
 class SplitBehavior < Behavior
-  def initalize
+  def initialize(options = {})
+    super
     actions = [ExplodeAction.new([Asteroid.new, Asteroid.new]), DestroyAction.new]
     collisions = [CollisionCondition.new, ClassCondition.new(Bullet)]
   end
 end
 
 class BulletBehavior < Behavior
-  def initalize
+  def initialize(options = {})
+    super
     actions = [DestroyAction.new]
     collisions = [CollisionCondition.new, ClassCondition.new(Asteroid)]
   end

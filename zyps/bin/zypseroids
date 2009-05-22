@@ -178,7 +178,6 @@ class Application < Wx::App
 	
 	#Shut down.
 	def on_exit
-		Configuration.save_object(self.options_file, @options) if self.options_file
 		exit
 	end
 	
@@ -227,11 +226,11 @@ class Application < Wx::App
   	    )
   	  end
   	  #Add player.
-  	  @ship = 	    Ship.new(
-      	      :location => Location.new(400, 300),
-    	        :size => 100,
-    	        :vector => Vector.new(rand(20), rand(360))
-      	    )
+  	  @ship = Ship.new(
+	      :location => Location.new(400, 300),
+        :size => 100,
+        :vector => Vector.new(rand(20), rand(360))
+      )
   	  @environment.add_object(@ship)
   	  #Have objects wrap.
   	  @enclosure = WrapAround.new(
