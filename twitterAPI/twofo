@@ -11,26 +11,27 @@ def usage():
 Provides a variety of twitter functions from the command line. Will \n\
 eventually (read potentially) have a GUI sometime in the future.\n\n\
 ACTIONS:\n\
-    -d, --delete <number>           Delete the number\'th last post\n\
-                                      For example, 0 deletes last post. \n\
-                                      1 deletes 2nd to last post\n\
-    -f, --friend <twitter user>     Get the last 10 tweets tweeted by \n\
-                                      <twitter-user>. Does not require\n\
-                                      username or password.\n\
-    -h, --help                      Prints this help and exits\n\
-    -l, --list                      Lists the 10 most recent tweets from \n\
-                                      your friends. You must provide a \n\
-                                      username and password.\n\
-    -o, --own                       Get the last 10 tweets you tweeted.\n\
-                                      requires that a username be \n\
-                                      provided using "-u <username>"\n\
-                                      (equiv to -f <own_username>)\n\
-    -t, --tweet "<tweet message>"   Tweets the message enclosed in the \n\
-                                      quotes. You must provide a valid\n\
-                                      username and password.\n\n\
+    -d, --delete                      Delete the last post\n\
+    -D, --delete-specified <number>   Delete the number\'th last post\n\
+                                        For example, 0 deletes last post. \n\
+                                        1 deletes 2nd to last post\n\
+    -f, --friend <twitter user>       Get the last 10 tweets tweeted by \n\
+                                        <twitter-user>. Does not require\n\
+                                        username or password.\n\
+    -h, --help                        Prints this help and exits\n\
+    -l, --list                        Lists the 10 most recent tweets from \n\
+                                        your friends. You must provide a \n\
+                                        username and password.\n\
+    -o, --own                         Get the last 10 tweets you tweeted.\n\
+                                        requires that a username be \n\
+                                        provided using "-u <username>"\n\
+                                        (equiv to -f <own_username>)\n\
+    -t, --tweet "<tweet message>"     Tweets the message enclosed in the \n\
+                                        quotes. You must provide a valid\n\
+                                        username and password.\n\n\
 OPTIONS:\n\
-    -p, --password <password>       Sets the password for authentication.\n\
-    -u, --username <username>       Sets the username for authentication.\n\n\
+    -p, --password <password>         Sets the password for authentication.\n\
+    -u, --username <username>         Sets the username for authentication.\n\n\
 Report bugs to info@gangplankhq.com\n')
 
 def tweet(api, message):
@@ -39,7 +40,8 @@ def tweet(api, message):
 
 def delete_tweet(api, username, number):
     # Deletes n'th last post. number=2 would delete the 3rd to last post
-    statuses = api.GetUserTimeline(username, number)
+    number = int(number)
+    statuses = api.GetUserTimeline(username, (1 + number))
     status = get_status_from_statuses(statuses, number)
     status_id = status.GetId()
     if confirm_action(status, "delete"):
@@ -53,17 +55,20 @@ def confirm_action(status, action):
     bold = "\033[1m"
     reset = "\033[0;0m"
 
-    # Get potser
+    # Get tweeter
     poster = status.GetUser()
     status_poster = bold + poster.GetName() + reset
+    # Get tweet text
     status_text = status.GetText()
     print("\n\
 %s\n\
 %s" % (status_poster,status_text))
 
+    # Get time at which tweet was sent
     status_time = status.GetCreatedAt()
     print("\ttweeted on: %s\n" % (status_time))
 
+    # Ask for confirmation
     inquery_text = "Are you sure you wish to %s this tweet, \n\
     this action cannot be undone (y/n):" % (action)
     inquery_response = raw_input(inquery_text)
@@ -81,6 +86,7 @@ def get_status_from_statuses(statuses, number):
     for status in statuses:
         if counter == number:
             return status
+        counter = counter + 1
 
 def authenticated_list(api, authenticated_username):
     statuses = api.GetFriendsTimeline(authenticated_username)
@@ -162,8 +168,8 @@ def read_parameters(argv):
     # Returns a dictionary containing the action and an optional argument
     parameters = {'action': None, 'argument': None}
     try:
-        opts, args = getopt.getopt(argv, "df:hlop:t:u:",
-        ["delete", "friend", "help", "list",
+        opts, args = getopt.getopt(argv, "dD:f:hlop:t:u:",
+        ["delete", "delete-specified", "friend", "help", "list",
         "own", "password", "tweet", "username"])
     except getopt.error:
         usage()
@@ -173,10 +179,10 @@ def read_parameters(argv):
             # argument is optional for delete tweet. Defaults to 0 if no
             # argument is given
             parameters['action'] = "delete_tweet"
-            if arg:
-                parameters['argument'] = arg
-            else:
-                parameters['argument'] = 0
+            parameters['argument'] = 0
+        elif opt in ("-D", "--delete-specified"):
+            parameters['action'] = "delete_tweet"
+            parameters['argument'] = arg
         elif opt in ("-f", "--friend"):
             parameters['action'] = "list_friend"
             parameters['argument'] = arg
