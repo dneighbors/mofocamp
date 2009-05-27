@@ -194,6 +194,8 @@ class Application < Wx::App
 		  @ship.vector.pitch -= 10
 		when 316
 		  @ship.vector.pitch += 10
+		when 32
+	    @fire_action.do(@ship, [@ship])
 		end
 	end
 	
@@ -218,10 +220,8 @@ class Application < Wx::App
   	  #Add asteroids.
   	  6.times do
   	    @environment.add_object(
-  	      Asteroid.new(
-  	        :location => Location.new(rand(800), rand(600)),
-  	        :size => 300,
-  	        :vector => Vector.new(rand(20), rand(360))
+  	      BigAsteroid.new(
+  	        :location => Location.new(rand(800), rand(600))
   	      )
   	    )
   	  end
@@ -240,6 +240,8 @@ class Application < Wx::App
   			:right => @drawing_area.size.width
   	  )
   	  @environment.add_environmental_factor(@enclosure)
+  	  #Have ship shoot bullets.
+  	  @fire_action = FireAction.new([Bullet.new])
 
 			@environment.add_environmental_factor SpeedLimit.new(@options[:max_speed]) if @options[:max_speed]
 			@environment.add_environmental_factor PopulationLimit.new(@options[:max_population]) if @options[:max_population]

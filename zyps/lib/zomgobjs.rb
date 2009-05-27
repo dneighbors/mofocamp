@@ -34,47 +34,86 @@ LOG_LEVEL = Logger::DEBUG
 
 class Asteroid < Creature
   def initialize(options = {})
-    options = {
-      :size => 25,
-      :location => Location.new(0, 0)
-    }.merge(options)
-    vector = Vector.new(rand(10), rand(360))
-    behaviors = [SplitBehavior.new]
-    size = options[:size]
-    color = Color.white
+    super({
+      :size => 500,
+      :vector => Vector.new(rand(10), rand(360)),
+      :color => Color.green
+    }.merge(options))
+  end
+end
+
+class BigAsteroid < Asteroid
+  def initialize(options = {})
+    super({:size => 500}.merge(options))
+    add_behavior(SplitBehavior.new(:prototypes => [MediumAsteroid.new, MediumAsteroid.new]))
+  end
+end
+class MediumAsteroid < Asteroid
+  def initialize(options = {})
+    super({:size => 250}.merge(options))
+    add_behavior(SplitBehavior.new(:prototypes => [SmallAsteroid.new, SmallAsteroid.new]))
+  end
+end
+class SmallAsteroid < Asteroid
+  def initialize(options = {})
+    super({:size => 100}.merge(options))
   end
 end
 
 class Bullet < Creature
   def initialize(options = {})
-    options = {
-      :location => Location.new(0, 0),
-      :vector => Vector.new(100, rand(360))
-    }.merge(options)
-    behaviors = [BulletBehavior.new]
-    color = Color.red
+    super({
+      :behaviors => [BulletBehavior.new],
+      :color => Color.red,
+      :vector => Vector.new(100, 0)
+    }.merge(options))
   end
 end
 
 class Ship < Creature
   def initialize(options = {})
-    super
-    color = Color.blue
+    super({
+      :color => Color.blue
+    }.merge(options))
   end
 end
 
 class SplitBehavior < Behavior
   def initialize(options = {})
-    super
-    actions = [ExplodeAction.new([Asteroid.new, Asteroid.new]), DestroyAction.new]
-    collisions = [CollisionCondition.new, ClassCondition.new(Bullet)]
+    super({
+      :conditions => [CollisionCondition.new, ClassCondition.new(Bullet)]
+    }.merge(options))
+    prototypes = options[:prototypes]
+  end
+  def prototypes=(objects)
+    self.actions = [ExplodeAction.new(objects)]
   end
 end
 
 class BulletBehavior < Behavior
   def initialize(options = {})
-    super
-    actions = [DestroyAction.new]
-    collisions = [CollisionCondition.new, ClassCondition.new(Asteroid)]
+    super({
+      :actions => [DestroyAction.new],
+      :conditions => [CollisionCondition.new, ClassCondition.new(Asteroid)]
+    }.merge(options))
   end
+end
+
+class FireAction < SpawnAction
+	attr_accessor :prototypes
+	def initialize(*arguments)
+		super
+		@prototype_index = 0
+	end
+	#Copies next prototype into environment.
+	def do(actor, targets)
+		targets.first.environment.add_object(generate_child(actor, prototypes[@prototype_index]))
+	end
+	#Calls super method.
+	#Also makes child angle match parent angle.
+	def generate_child(actor, prototype)
+		child = super(actor, prototype)
+		child.vector.pitch = actor.vector.pitch
+		child
+	end
 end

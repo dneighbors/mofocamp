@@ -134,7 +134,7 @@ class ClassCondition < Condition
 	end
 	#Returns an array of targets that are of the selected Ruby class.
 	def select(actor, targets)
-		targets.grep(target_class)
+		targets.find_all{|target| target.kind_of?(target_class)}
 	end
 	#True if target class is equal.
 	def ==(other)
