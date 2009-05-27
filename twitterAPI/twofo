@@ -7,7 +7,31 @@ import ConfigParser
 
 
 def usage():
-    print('Usage: twofo [OPTION]\nProvides a variety of twitter functions from the command line. Will eventually (read potentially) have a GUI sometime in the future.\n\nACTIONS:\n\t-d, --delete <number>\t\tDelete the number\'th last post\n\t\t\t\t\tFor example, 0 deletes last post. \n\t\t\t\t\t1 deletes 2nd to last post\n\t-f, --friend <twitter user>\tGet the last 10 tweets tweeted by \n\t\t\t\t\t<twitter-user>. Does not require\n\t\t\t\t\tusername or password.\n\t-h, --help\t\t\tPrints this help and exits\n\t-l, --list\t\t\tLists the 10 most recent tweets from \n\t\t\t\t\tyour friends. You must provide a \n\t\t\t\t\tusername and password.\n\t-o, --own\t\t\tGet the last 10 tweets you tweeted.\n\t\t\t\t\trequires that a username be \n\t\t\t\t\tprovided using "-u <username>"\n\t\t\t\t\t(equiv to -f <own_username>)\n\t-t, --tweet "<tweet message>"   Tweets the message enclosed in the \n\t\t\t\t\tquotes. You must provide a valid\n\t\t\t\t\tusername and password.\n\nOPTIONS:\n\t-p, --password <password>\tSets the password for authentication.\n\t-u, --username <username>\tSets the username for authentication.\n\nReport bugs to info@gangplankhq.com\n')
+    print('Usage: twofo [OPTION]\n\
+Provides a variety of twitter functions from the command line. Will \n\
+eventually (read potentially) have a GUI sometime in the future.\n\n\
+ACTIONS:\n\
+    -d, --delete <number>           Delete the number\'th last post\n\
+                                      For example, 0 deletes last post. \n\
+                                      1 deletes 2nd to last post\n\
+    -f, --friend <twitter user>     Get the last 10 tweets tweeted by \n\
+                                      <twitter-user>. Does not require\n\
+                                      username or password.\n\
+    -h, --help                      Prints this help and exits\n\
+    -l, --list                      Lists the 10 most recent tweets from \n\
+                                      your friends. You must provide a \n\
+                                      username and password.\n\
+    -o, --own                       Get the last 10 tweets you tweeted.\n\
+                                      requires that a username be \n\
+                                      provided using "-u <username>"\n\
+                                      (equiv to -f <own_username>)\n\
+    -t, --tweet "<tweet message>"   Tweets the message enclosed in the \n\
+                                      quotes. You must provide a valid\n\
+                                      username and password.\n\n\
+OPTIONS:\n\
+    -p, --password <password>       Sets the password for authentication.\n\
+    -u, --username <username>       Sets the username for authentication.\n\n\
+Report bugs to info@gangplankhq.com\n')
 
 def tweet(api, message):
     """Set your status to <message>."""
@@ -18,7 +42,36 @@ def delete_tweet(api, username, number):
     statuses = api.GetUserTimeline(username, number)
     status = get_status_from_statuses(statuses, number)
     status_id = status.GetId()
-    api.DestroyStatus(status_id)
+    if confirm_action(status, "delete"):
+        api.DestroyStatus(status_id)
+    else:
+        print("Delete action aborted")
+        sys.exit(0)
+
+def confirm_action(status, action):
+    # Set bold modifiers
+    bold = "\033[1m"
+    reset = "\033[0;0m"
+
+    # Get potser
+    poster = status.GetUser()
+    status_poster = bold + poster.GetName() + reset
+    status_text = status.GetText()
+    print("\n\
+%s\n\
+%s" % (status_poster,status_text))
+
+    status_time = status.GetCreatedAt()
+    print("\ttweeted on: %s\n" % (status_time))
+
+    inquery_text = "Are you sure you wish to %s this tweet, \n\
+    this action cannot be undone (y/n):" % (action)
+    inquery_response = raw_input(inquery_text)
+    if inquery_response in ("y", "Y", "yes", "Yes", "YES"):
+        return True
+    else:
+        return False
+
 
 def get_status_from_statuses(statuses, number):
     # Retrieves the number'th index of statuses. This method is necessary
