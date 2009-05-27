@@ -5,28 +5,98 @@ import getopt
 import twitter
 import ConfigParser
 
-#Declare globals
-api = None
 
 def usage():
-    print('Usage: twofo [OPTION]\nProvides a variety of twitter functions from the command line. Will eventually (read potentially) have a GUI sometime in the future.\n\nACTIONS:\n\t-f, --friend <twitter user>\tGet the last 10 tweets tweeted by \n\t\t\t\t\t<twitter-user>. Does not require\n\t\t\t\t\tusername or password.\n\t-h, --help\t\t\tPrints this help and exits\n\t-l, --list\t\t\tLists the 10 most recent tweets from \n\t\t\t\t\tyour friends. You must provide a \n\t\t\t\t\tusername and password.\n\t-o, --own\t\t\tGet the last 10 tweets you tweeted.\n\t\t\t\t\trequires that a username be \n\t\t\t\t\tprovided using "-u <username>"\n\t\t\t\t\t(equiv to -f <own_username>)\n\t-t, --tweet "<tweet message>"   Tweets the message enclosed in the \n\t\t\t\t\tquotes. You must provide a valid\n\t\t\t\t\tusername and password.\n\nOPTIONS:\n\t-p, --password <password>\tSets the password for authentication.\n\t-u, --username <username>\tSets the username for authentication.\n\nReport bugs to info@gangplankhq.com\n')
+    print('Usage: twofo [OPTION]\n\
+Provides a variety of twitter functions from the command line. Will \n\
+eventually (read potentially) have a GUI sometime in the future.\n\n\
+ACTIONS:\n\
+    -d, --delete                      Delete the last post\n\
+    -D, --delete-specified <number>   Delete the number\'th last post\n\
+                                        For example, 0 deletes last post. \n\
+                                        1 deletes 2nd to last post\n\
+    -f, --friend <twitter user>       Get the last 10 tweets tweeted by \n\
+                                        <twitter-user>. Does not require\n\
+                                        username or password.\n\
+    -h, --help                        Prints this help and exits\n\
+    -l, --list                        Lists the 10 most recent tweets from \n\
+                                        your friends. You must provide a \n\
+                                        username and password.\n\
+    -o, --own                         Get the last 10 tweets you tweeted.\n\
+                                        requires that a username be \n\
+                                        provided using "-u <username>"\n\
+                                        (equiv to -f <own_username>)\n\
+    -t, --tweet "<tweet message>"     Tweets the message enclosed in the \n\
+                                        quotes. You must provide a valid\n\
+                                        username and password.\n\n\
+OPTIONS:\n\
+    -p, --password <password>         Sets the password for authentication.\n\
+    -u, --username <username>         Sets the username for authentication.\n\n\
+Report bugs to info@gangplankhq.com\n')
 
-def tweet(message):
+def tweet(api, message):
     """Set your status to <message>."""
     status = api.PostUpdate(message)
 
-def authenticatedList(authenticatedUsername):
-    global api
-    # Get our username from the global api var
-    statuses = api.GetFriendsTimeline(authenticatedUsername)
-    printStatuses(statuses)
+def delete_tweet(api, username, number):
+    # Deletes n'th last post. number=2 would delete the 3rd to last post
+    number = int(number)
+    statuses = api.GetUserTimeline(username, (1 + number))
+    status = get_status_from_statuses(statuses, number)
+    status_id = status.GetId()
+    if confirm_action(status, "delete"):
+        api.DestroyStatus(status_id)
+    else:
+        print("Delete action aborted")
+        sys.exit(0)
 
-def unauthenticatedList(username):
-    global api
+def confirm_action(status, action):
+    # Set bold modifiers
+    bold = "\033[1m"
+    reset = "\033[0;0m"
+
+    # Get tweeter
+    poster = status.GetUser()
+    status_poster = bold + poster.GetName() + reset
+    # Get tweet text
+    status_text = status.GetText()
+    print("\n\
+%s\n\
+%s" % (status_poster,status_text))
+
+    # Get time at which tweet was sent
+    status_time = status.GetCreatedAt()
+    print("\ttweeted on: %s\n" % (status_time))
+
+    # Ask for confirmation
+    inquery_text = "Are you sure you wish to %s this tweet, \n\
+    this action cannot be undone (y/n):" % (action)
+    inquery_response = raw_input(inquery_text)
+    if inquery_response in ("y", "Y", "yes", "Yes", "YES"):
+        return True
+    else:
+        return False
+
+
+def get_status_from_statuses(statuses, number):
+    # Retrieves the number'th index of statuses. This method is necessary
+    # because statuses are indexed by their status id, often non sequential and
+    # in the millions
+    counter = 0
+    for status in statuses:
+        if counter == number:
+            return status
+        counter = counter + 1
+
+def authenticated_list(api, authenticated_username):
+    statuses = api.GetFriendsTimeline(authenticated_username)
+    print_statuses(statuses)
+
+def unauthenticated_list(api, username):
     statuses = api.GetUserTimeline(username)
-    printStatuses(statuses)
+    print_statuses(statuses)
 
-def printStatuses(statuses):
+def print_statuses(statuses):
     counter = 0
     for status in statuses:
         if counter < 10:
@@ -42,25 +112,30 @@ def ensure_dir(directory):
     if not os.path.exists(dir):
         os.makedirs(dir)
 
-def main(argv):
-    username = None
-    password = None
+def load_config():
+    # Check the config file to see if we can extract the username and password
+    # This method returns a dictionary containing the username and password
+    # Instantiate our dictionary object
+    user_and_pass = {'username': None, 'password': None}
+    # Open the config file
+    config = ConfigParser.SafeConfigParser()
+    defaultConfigDir = "%s/.config/twofo/default.conf" % os.getenv("HOME")
+    # There is currently no way to overide the defaultConfigDir. I might
+    # implement this later - Roy
+    config.read(defaultConfigDir)
     storeInfo = None
     storeUsername = None
     storePassword = None
-    # Check the config file to see if we can extract the username and password
-    config = ConfigParser.SafeConfigParser()
-    defaultConfigDir = "%s/.config/twofo/default.conf" % os.getenv("HOME")
-    config.read(defaultConfigDir)
     if config.has_option('login', 'username'):
-        username = config.get('login', 'username')
+        user_and_pass['username'] = config.get('login', 'username')
     else:
-        username = raw_input("Username: ")
+        user_and_pass['username'] = raw_input("Username: ")
         storeInfo = 1
     if config.has_option('login', 'password'):
-        password = config.get('login', 'password')
+        user_and_pass['password'] = config.get('login', 'password')
+
     else:
-        password = raw_input("Password: ")
+        user_and_pass['password'] = raw_input("Password: ")
     if config.has_option('login', 'storeInfo'):
         storeInfo = config.get('login', 'storeInfo')
     if storeInfo:
@@ -76,63 +151,103 @@ def main(argv):
                         storePassword = True
                     else:
                         storePassword = False
+    # At this point, we know what we are allowed to store
     if storeUsername:
         if not config.has_section('login'):
             config.add_section('login')
-        config.set('login', 'username', username)
+        config.set('login', 'username', user_and_pass['username'])
         if storePassword:
-            config.set('login', 'password', password)
+            config.set('login', 'password', user_and_pass['password'])
         ensure_dir(defaultConfigDir)
         configfile = open(defaultConfigDir, 'wb')
         config.write(configfile)
-    action = None
+    return user_and_pass
+
+def read_parameters(argv):
+    # Start reading passed parameters
+    # Returns a dictionary containing the action and an optional argument
+    parameters = {'action': None, 'argument': None}
     try:
-        opts, args = getopt.getopt(argv, "f:hlop:t:u:", ["friend", "help", "list", "own", "password", "tweet", "username"])
+        opts, args = getopt.getopt(argv, "dD:f:hlop:t:u:",
+        ["delete", "delete-specified", "friend", "help", "list",
+        "own", "password", "tweet", "username"])
     except getopt.error:
         usage()
         sys.exit(2)
     for opt, arg in opts:
-        if opt in ("-f", "--friend"):
-            action = "listfriend"
-            targetUser = arg
+        if opt in ("-d", "--delete"):
+            # argument is optional for delete tweet. Defaults to 0 if no
+            # argument is given
+            parameters['action'] = "delete_tweet"
+            parameters['argument'] = 0
+        elif opt in ("-D", "--delete-specified"):
+            parameters['action'] = "delete_tweet"
+            parameters['argument'] = arg
+        elif opt in ("-f", "--friend"):
+            parameters['action'] = "list_friend"
+            parameters['argument'] = arg
         elif opt in ("-h", "--help"):
             usage()
             sys.exit()
         elif opt in ("-l", "--list"):
-            action = "list"
+            parameters['action'] = "list"
         elif opt in ("-o", "--own"):
-            action = "listown"
+            parameters['action'] = "list_own"
         elif opt in ("-p", "--password"):
             password = arg
         elif opt in ("-t", "--tweet"):
-            action = "tweet"
-            tweetMessage = arg
+            parameters['action'] = "tweet"
+            parameters['argument'] = arg
         elif opt in ("-u", "--username"):
             username = arg
-    global api # Let our function know we mean the global api
+    return parameters
+
+
+def main(argv):
+    username = None
+    password = None
+
+    # attempt to load the config file
+    user_and_pass = load_config()
+    username = user_and_pass['username']
+    password = user_and_pass['password']
+
+
+    # We are no longer using a global api variable. 
+    # The api must be passed as a parameter. This prevents coupling
+    api = None
+
+    # Read the passed parameters
+    parameters = read_parameters(argv)
+    action = parameters['action']
+    argument = parameters['argument']
+
     if action:
         if username and password:
             api = twitter.Api(username=username, password=password)
         else:
             api = twitter.Api()
-        if action in ("list", "listfriend", "listown"):
-            if action in ("listown"):
+        if action in ("list", "list_friend", "list_own"):
+            if action in ("list_own"):
                 if username:
-                    targetUser = username
+                    argument = username
                 else:
                     print "A username must be supplied to get your list"
                     sys.exit(-1)
-            if action in ("listfriend", "listown"):
-                unauthenticatedList(targetUser)
+            if action in ("list_friend", "list_own"):
+                unauthenticated_list(api, argument)
             elif action in ("list"):
                 if username and password:
-                    authenticatedList(username)
+                    authenticated_list(api, username)
                 else:
                     print "A username and password must be supplied to get that list"
                     sys.exit(-1)
-        elif action in ("tweet"):
+        elif action in ("tweet", "delete_tweet"):
             if username and password:
-                tweet(tweetMessage)
+                if action in ("tweet"):
+                    tweet(api, argument)
+                elif action in ("delete_tweet"):
+                    delete_tweet(api, username, argument)
             else:
                 print "Username and password must be supplied to post a tweet"
                 sys.exit(-1)
