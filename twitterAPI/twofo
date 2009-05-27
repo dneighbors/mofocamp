@@ -227,6 +227,8 @@ def main(argv):
             api = twitter.Api(username=username, password=password)
         else:
             api = twitter.Api()
+        # This next line is suppossed to set the "posted by", not working
+        # api.SetXTwitterHeaders("twofo", "mofocamp.com", "0.3")
         if action in ("list", "list_friend", "list_own"):
             if action in ("list_own"):
                 if username:
